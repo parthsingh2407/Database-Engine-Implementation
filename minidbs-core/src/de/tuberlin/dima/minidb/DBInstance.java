@@ -4,6 +4,7 @@ package de.tuberlin.dima.minidb;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.InvalidPropertiesFormatException;
 import java.util.Iterator;
 import java.util.logging.Level;
@@ -15,11 +16,14 @@ import de.tuberlin.dima.minidb.catalogue.CatalogueFormatException;
 import de.tuberlin.dima.minidb.catalogue.IndexDescriptor;
 import de.tuberlin.dima.minidb.catalogue.TableDescriptor;
 import de.tuberlin.dima.minidb.core.InternalOperationFailure;
+import de.tuberlin.dima.minidb.io.cache.PageFormatException;
 import de.tuberlin.dima.minidb.io.index.IndexResourceManager;
+import de.tuberlin.dima.minidb.io.manager.BufferPoolException;
 import de.tuberlin.dima.minidb.io.manager.BufferPoolManager;
 import de.tuberlin.dima.minidb.io.manager.ResourceManager;
 import de.tuberlin.dima.minidb.io.tables.TableResourceManager;
 import de.tuberlin.dima.minidb.qexec.heap.QueryHeap;
+import de.tuberlin.dima.minidb.util.InputStreamFileReader;
 
 
 /**
@@ -126,7 +130,6 @@ public class DBInstance
 	 */
 	private boolean running;
 
-	
 	/**
 	 * Gets the logger for this instance.
 	 * 
@@ -271,8 +274,8 @@ public class DBInstance
 
 		// load the configuration from the config file
 		try {
-			File configFile = new File(this.configFileName);
-			this.CONFIG = Config.loadConfig(configFile);
+			InputStream is = this.getClass().getResourceAsStream(configFileName);
+	    	this.CONFIG = Config.loadConfig(is);
 		}
 		catch (InvalidPropertiesFormatException ipfex) {
 			this.LOGGER.log(Level.SEVERE, "Configuration file '" + this.configFileName + "' has an invalid format: " + ipfex.getMessage(), ipfex);
@@ -293,21 +296,31 @@ public class DBInstance
 		}
 
 		// check for existence of data directory and temp-space directory
-		File file = new File(this.CONFIG.getDataDirectory());
-		if (!file.exists()) {
+
+		// adapt path in case of jar source
+		File file = null;
+		if(this.getClass().getResource(this.CONFIG.getDataDirectory()) == null)
+			file = new File(this.CONFIG.getDataDirectory());
+		else
+			file = new File(this.getClass().getResource(this.CONFIG.getDataDirectory()).getPath());
+		
+		if (!file.exists() && this.getClass().getResource(this.CONFIG.getDataDirectory()) != null) {
 			this.LOGGER.log(Level.SEVERE, "Data directory '" + file + "' does not exist.");
 			return RETURN_CODE_INVALID_CONIG_PARAMETER;
 		}
-		file = new File(this.CONFIG.getTempspaceDirectory());
-		if (!file.exists()) {
+		if(this.getClass().getResource(this.CONFIG.getTempspaceDirectory()) == null)
+			file = new File(this.CONFIG.getTempspaceDirectory());
+		else
+			file = new File(this.getClass().getResource(this.CONFIG.getTempspaceDirectory()).getPath());
+		if (!file.exists() && this.getClass().getResource(this.CONFIG.getTempspaceDirectory()) != null) {
 			this.LOGGER.log(Level.SEVERE, "Tempspace directory '" + file + "' does not exist.");
 			return RETURN_CODE_INVALID_CONIG_PARAMETER;
 		}
 
 		// load the catalogue
 		try {
-			File catalogueFile = new File(this.catalogueFileName);
-			this.CATALOGUE = Catalogue.loadCatalogue(catalogueFile);
+			InputStream is = this.getClass().getResourceAsStream(catalogueFileName);
+			this.CATALOGUE = Catalogue.loadCatalogue(is);
 		}
 		catch (CatalogueFormatException e) {
 			this.LOGGER.log(Level.SEVERE, "Catalogue file '" + this.catalogueFileName + "' has an invalid format: " + e.getMessage(), e);
@@ -508,7 +521,12 @@ public class DBInstance
 
 		while (tableIter.hasNext()) {
 			TableDescriptor td = tableIter.next();
-			File tableFile = new File(config.getDataDirectory(), td.getFileName());
+			//adapt path in case of jar source
+			File tableFile = null;
+			if(DBInstance.class.getResource(config.getDataDirectory()) == null)
+				tableFile = InputStreamFileReader.inputStreamToFile(DBInstance.class, config.getDataDirectory() + "" + td.getFileName());
+			else
+				tableFile = new File(DBInstance.class.getResource(config.getDataDirectory()).getPath(), td.getFileName());
 
 			// open the table
 			TableResourceManager manager = null;
@@ -546,7 +564,11 @@ public class DBInstance
 			}
 
 			// open the index
-			File indexFile = new File(config.getDataDirectory(), id.getFileName());
+			File indexFile = null;
+			if(DBInstance.class.getResource(config.getDataDirectory()) == null)
+				indexFile = InputStreamFileReader.inputStreamToFile(DBInstance.class, config.getDataDirectory() + "" + id.getFileName());
+			else
+				indexFile = new File(DBInstance.class.getResource(config.getDataDirectory()).getPath(), id.getFileName());
 			IndexResourceManager manager = null;
 			try {
 				manager = IndexResourceManager.openIndex(indexFile, table.getSchema());

@@ -4,13 +4,12 @@ package de.tuberlin.dima.minidb.catalogue;
 import java.beans.ExceptionListener;
 import java.beans.XMLDecoder;
 import java.beans.XMLEncoder;
-import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -339,7 +338,7 @@ public class Catalogue
 	 * @throws CatalogueFormatException Thrown, if the contents of the file did not describe a
 	 *                                  well formed catalogue.
 	 */
-	public static Catalogue loadCatalogue(File xmlCatalogueFile)
+	public static Catalogue loadCatalogue(InputStream xmlCatalogueFile)
 	throws FileNotFoundException, IOException, CatalogueFormatException
 	{
 		// create an exception listener to intercept exceptions
@@ -348,10 +347,9 @@ public class Catalogue
 		// lists to collect the read information
 		List<TableDescriptorBean> tables = new ArrayList<TableDescriptorBean>();
 		List<IndexDescriptorBean> indexes = new ArrayList<IndexDescriptorBean>();
-		
+		XMLDecoder decoder = new XMLDecoder(xmlCatalogueFile, Catalogue.class, listener);
 		// create a decoder for the XML file
-		try (XMLDecoder decoder = new XMLDecoder(new BufferedInputStream(
-				new FileInputStream(xmlCatalogueFile)), Catalogue.class, listener)){
+		try {
 		
 			// first, read all the catalogue into the lists
 		
@@ -375,6 +373,8 @@ public class Catalogue
 		}
 		catch (ArrayIndexOutOfBoundsException aioobex) {
 			// we are done reading, do nothing
+		}finally{
+			decoder.close();
 		}
 		
 		// check if all went well

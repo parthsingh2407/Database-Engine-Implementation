@@ -3,6 +3,7 @@ package de.tuberlin.dima.minidb.qexec.heap;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -23,9 +24,9 @@ import de.tuberlin.dima.minidb.core.InternalOperationFailure;
 import de.tuberlin.dima.minidb.io.cache.PageFormatException;
 import de.tuberlin.dima.minidb.io.cache.PageSize;
 import de.tuberlin.dima.minidb.io.tables.PageTupleAccessException;
-import de.tuberlin.dima.minidb.io.tables.TupleIterator;
 import de.tuberlin.dima.minidb.io.tables.TablePage;
 import de.tuberlin.dima.minidb.io.tables.TableResourceManager;
+import de.tuberlin.dima.minidb.io.tables.TupleIterator;
 
 
 /**
@@ -190,7 +191,11 @@ public class QueryHeap
 			this.blockBuffers.add(new byte[BLOCK_PAGE_SIZE.getNumberOfBytes()]);
 		}
 		this.maxBuffersPerAssignment = (int) (this.numTotalBlockBuffers * MAX_BUFFER_FRACTION_PER_ASSIGNMENT);
-		this.tempFileDirectory = new File(config.getTempspaceDirectory());
+		//adapt path in case of jar source
+		if(this.getClass().getResource(config.getTempspaceDirectory()) == null)
+			this.tempFileDirectory = new File(config.getTempspaceDirectory());
+		else
+			this.tempFileDirectory = new File(this.getClass().getResource(config.getTempspaceDirectory()).getPath());
 		
 		// ----------------- set up assignable part -------------------
 		this.totalAssignableSize = sizeInBytes - bytesForBlocks;
@@ -518,9 +523,18 @@ public class QueryHeap
 				schema.addColumn(scheme);
 			}
 			
-			// create a new temp file
-			File tempFile = new File(this.tempFileDirectory, 
+			// create a new temp file, checking whether we are in jar or not
+			String resource = "/config.xml";
+		    URL res = getClass().getResource(resource);
+			File tempFile = null;
+			if (res.toString().startsWith("jar:")){
+				tempFile = File.createTempFile(Constants.QUERY_HEAP_TEMP_FILE_PREFIX, String.valueOf(space.getHeapId()));
+				tempFile.deleteOnExit();
+			}
+			else{
+				tempFile = new File(this.tempFileDirectory, 
 					Constants.QUERY_HEAP_TEMP_FILE_PREFIX + space.getHeapId());
+			}
 			tempFileHandle = TableResourceManager.createTable(tempFile, schema);
 			space.setTempFile(tempFile, tempFileHandle);
 		}

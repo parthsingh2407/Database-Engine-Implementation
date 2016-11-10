@@ -1,10 +1,8 @@
 package de.tuberlin.dima.minidb;
 
 
-import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -91,19 +89,18 @@ public final class Config
 	 * given file, or the default value, if there was no specification for that property
 	 * in the file. 
 	 * 
-	 * @param xmlConfigFile The file containing the configuration.
+	 * @param xmlConfigFile The file containing the configuration as InputStream.
 	 * @return A config object, based on the config file and the default values.
 	 * 
 	 * @throws InvalidPropertiesFormatException Thrown, if the format in which the configuration
 	 *                                          data from the stream comes is invalid.
 	 * @throws IOException Thrown, if the stream cannot be read for some reason.
 	 */
-	public static Config loadConfig(File xmlConfigFile)
+	public static Config loadConfig(InputStream xmlConfigFile)
 	throws IOException, InvalidPropertiesFormatException
 	{
 		// read the properties
-		InputStream inStream = new BufferedInputStream(new FileInputStream(xmlConfigFile));
-		Config conf = new Config(inStream);
+		Config conf = new Config(xmlConfigFile);
 		
 		// check the read contents
 		String violatingKey = conf.getInvalidFormatKey();
@@ -151,7 +148,11 @@ public final class Config
 	 */
 	public String getDataDirectory()
 	{
-		return Config.class.getResource(this.props.getProperty(DATA_DIRECTORY_KEY)).getPath();
+		try {
+			return this.props.getProperty(DATA_DIRECTORY_KEY);
+		} catch (Exception e) {
+			return "";
+		}
 	}
 	
 	/**
@@ -161,7 +162,7 @@ public final class Config
 	 */
 	public String getTempspaceDirectory()
 	{
-		return Config.class.getResource(this.props.getProperty(TEMPSPACE_DIRECTORY_KEY)).getPath();
+		return this.props.getProperty(TEMPSPACE_DIRECTORY_KEY);
 	}
 	
 	/**
