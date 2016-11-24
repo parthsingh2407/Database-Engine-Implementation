@@ -12,6 +12,7 @@ import de.tuberlin.dima.minidb.io.cache.PageFormatException;
 import de.tuberlin.dima.minidb.io.cache.PageSize;
 import de.tuberlin.dima.minidb.io.index.BTreeIndex;
 import de.tuberlin.dima.minidb.io.manager.BufferPoolManager;
+import de.tuberlin.dima.minidb.io.manager.BufferPoolManagerImpl;
 import de.tuberlin.dima.minidb.io.tables.TablePage;
 import de.tuberlin.dima.minidb.io.tables.TableResourceManager;
 import de.tuberlin.dima.minidb.mapred.TableInputFormat;
@@ -56,7 +57,8 @@ public class ExtensionFactory extends AbstractExtensionFactory {
 
 	@Override
 	public BufferPoolManager createBufferPoolManager(Config config, Logger logger) {
-		throw new UnsupportedOperationException("Method not yet supported");
+		return new BufferPoolManagerImpl(config, logger);
+		//throw new UnsupportedOperationException("Method not yet supported");
 	}
 
 	@Override
